@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Ref of the commit from a release will be built
+        required: true
+        type: string
+      octez_version:
+        description: Version of the octez package to be used for the jstzd image
+        required: true
+        type: string
+      dry_run:
+        description: Dry-run CLI build without publishing a release
+        type: boolean
+        required: false
+        default: true
+      build_images:
+        description: Build images
+        type: boolean
+        required: false
+        default: true
+      build_cli:
+        description: Build CLI
+        type: boolean
+        required: false
+        default: true
+      build_sdk:
+        description: Build SDK
+        type: boolean
+        required: false
+        default: true
+      publish_runtime_api_coverage:
+        description: Publish runtime API coverage
+        type: boolean
+        required: false
+        default: true
+      deploy_docs:
+        description: Deploy docs
+        type: boolean
+        required: false
+        default: true
+  workflow_call:
+    inputs:
+      ref:
+        description: Ref of the commit from a release will be built
+        required: true
+        type: string
+      octez_version:
+        description: Version of the octez package to be used for the jstzd image
+        required: true
+        type: string
+      dry_run:
+        description: Dry-run SDK build without pushing to NPM
+        type: boolean
+        required: false
+        default: true
+      build_images:
+        description: Build images
+        type: boolean
+        required: false
+        default: true
+      build_cli:
+        description: Build CLI
+        type: boolean
+        required: false
+        default: true
+      build_sdk:
+        description: Build SDK
+        type: boolean
+        required: false
+        default: true
+      publish_runtime_api_coverage:
+        description: Publish runtime API coverage
+        type: boolean
+        required: false
+        default: true
+      deploy_docs:
+        description: Deploy docs
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  images:
+    name: Build images
+    if: ${{ inputs.build_images }}
+    uses: jstz-dev/jstz/.github/workflows/docker.yml@main
+    with:
+      ref: ${{ inputs.ref }}
+      dry_run: ${{ inputs.dry_run }}
+      octez_version: ${{ inputs.octez_version }}
+    secrets: inherit
+
+  cli:
+    name: Build CLI
+    if: ${{ inputs.build_cli }}
+    uses: jstz-dev/jstz/.github/workflows/cli-npm.yaml@main
+    with:
+      ref: ${{ inputs.ref }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  sdk:
+    name: Build SDK
+    if: ${{ inputs.build_sdk }}
+    uses: jstz-dev/jstz/.github/workflows/sdk-npm.yml@main
+    with:
+      ref: ${{ inputs.ref }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  runtime_api_coverage:
+    name: Publish runtime API coverage
+    if: ${{ inputs.publish_runtime_api_coverage }}
+    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@main
+    secrets:
+      repo_token: ${{ secrets.RUNTIME_API_REPORT_REPO }}
+    with:
+      dest_repo: jstz-dev/nodejs-compat-matrix
+      dest_branch: deploy
+      build_ref: ${{ inputs.ref }}
+      deploy_report: ${{ !inputs.dry_run }}
+
+  deploy_docs:
+    name: Deploy docs
+    if: ${{ inputs.deploy_docs }}
+    uses: jstz-dev/jstz/.github/workflows/deploy-docs.yml@main
+    with:
+      ref: ${{ inputs.ref }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
