@@ -73,6 +73,7 @@ pub(crate) mod tests {
         hash::Blake2b,
         smart_function_hash::{Kt1Hash, SmartFunctionHash},
     };
+    use jstz_mock::kt1_account1;
     use jstz_proto::receipt::{
         DeployFunctionReceipt, Receipt, ReceiptContent, ReceiptResult,
     };
@@ -165,6 +166,7 @@ pub(crate) mod tests {
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
+                ticketer_address: kt1_account1(),
             },
             false,
             OctezRollupClient::new(String::new()),
@@ -184,6 +186,7 @@ pub(crate) mod tests {
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
+                ticketer_address: kt1_account1(),
             },
             false,
             OctezRollupClient::new(String::new()),

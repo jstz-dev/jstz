@@ -8,7 +8,7 @@ use jstz_utils::KeyPair;
 use octez::r#async::endpoint::Endpoint;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
-use tezos_crypto_rs::hash::SmartRollupHash;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -30,6 +30,7 @@ pub enum RunMode {
         debug_log_path: PathBuf,
         runtime_env: RuntimeEnv,
         inbox_checkpoint_path: PathBuf,
+        ticketer_address: ContractKt1Hash,
     },
     #[serde(alias = "default")]
     Default,
@@ -66,6 +67,7 @@ pub struct RunModeBuilder {
     riscv_kernel_path: Option<PathBuf>,
     rollup_address: Option<SmartRollupHash>,
     inbox_checkpoint_path: Option<PathBuf>,
+    ticketer_address: Option<ContractKt1Hash>,
 }
 
 impl RunModeBuilder {
@@ -120,6 +122,17 @@ impl RunModeBuilder {
         );
     }
 
+    pub fn with_ticketer_address(
+        mut self,
+        addr: ContractKt1Hash,
+    ) -> anyhow::Result<Self> {
+        if let RunModeType::Sequencer = self.mode {
+            self.ticketer_address.replace(addr);
+            return Ok(self);
+        }
+        anyhow::bail!("ticketer address can only be set when run mode is 'sequencer'");
+    }
+
     pub fn build(self) -> anyhow::Result<RunMode> {
         Ok(match self.mode {
             RunModeType::Default => RunMode::Default,
@@ -160,6 +173,7 @@ impl RunModeBuilder {
                             )?
                             .to_path_buf(),
                     ),
+                    ticketer_address: self.ticketer_address.ok_or(anyhow::anyhow!("ticketer address is not configured for sequencer"))?
                 }
             }
         })
@@ -259,12 +273,17 @@ mod tests {
         assert_eq!(json["runtime_env"], serde_json::Value::Null);
         assert_eq!(json["storage_sync"], true);
         assert_eq!(json["runtime_db_path"], serde_json::Value::Null);
+        assert_eq!(json["ticketer_address"], serde_json::Value::Null);
 
         config.mode = RunMode::Sequencer {
             capacity: 123,
             debug_log_path: PathBuf::from_str("/debug/log").unwrap(),
             runtime_env: RuntimeEnv::Native,
             inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap(),
+            ticketer_address: ContractKt1Hash::from_base58_check(
+                "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+            )
+            .unwrap(),
         };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["mode"], "sequencer");
@@ -272,6 +291,10 @@ mod tests {
         assert_eq!(json["debug_log_path"], "/debug/log");
         assert_eq!(json["runtime_env"], serde_json::json!({"type": "native"}));
         assert_eq!(json["inbox_checkpoint_path"], "/inbox/checkpoint");
+        assert_eq!(
+            json["ticketer_address"],
+            "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog"
+        );
 
         config.mode = RunMode::Sequencer {
             capacity: 123,
@@ -284,6 +307,10 @@ mod tests {
                 .unwrap(),
             },
             inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap(),
+            ticketer_address: ContractKt1Hash::from_base58_check(
+                "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+            )
+            .unwrap(),
         };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(
@@ -312,6 +339,10 @@ mod tests {
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
+                ticketer_address: ContractKt1Hash::from_base58_check(
+                    "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
             }
             .to_string(),
             "sequencer"
@@ -362,15 +393,45 @@ mod tests {
                 .to_string(),
             "inbox checkpoint path can only be set when run mode is 'sequencer'"
         );
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Default)
+                .with_ticketer_address(
+                    ContractKt1Hash::from_base58_check(
+                        "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                    )
+                    .unwrap()
+                )
+                .unwrap_err()
+                .to_string(),
+            "ticketer address can only be set when run mode is 'sequencer'"
+        );
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Sequencer)
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "ticketer address is not configured for sequencer"
+        );
 
-        let mode = RunModeBuilder::new(RunModeType::Sequencer).build().unwrap();
+        // check default values
+        let mode = RunModeBuilder::new(RunModeType::Sequencer)
+            .with_ticketer_address(
+                ContractKt1Hash::from_base58_check(
+                    "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
+            )
+            .unwrap()
+            .build()
+            .unwrap();
         matches!(
             mode,
             RunMode::Sequencer {
                 capacity: 1,
                 debug_log_path: _,
                 runtime_env: RuntimeEnv::Native,
-                inbox_checkpoint_path: _
+                inbox_checkpoint_path: _,
+                ticketer_address: _
             }
         );
 
@@ -384,13 +445,24 @@ mod tests {
                     PathBuf::from_str("/inbox/checkpoint").unwrap()
                 )
                 .unwrap()
+                .with_ticketer_address(
+                    ContractKt1Hash::from_base58_check(
+                        "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                    )
+                    .unwrap()
+                )
+                .unwrap()
                 .build()
                 .unwrap(),
             RunMode::Sequencer {
                 capacity: 123,
                 debug_log_path: PathBuf::from_str("/foo/bar").unwrap(),
                 runtime_env: RuntimeEnv::Native,
-                inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap()
+                inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap(),
+                ticketer_address: ContractKt1Hash::from_base58_check(
+                    "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap()
             }
         );
 
@@ -417,6 +489,13 @@ mod tests {
             .unwrap()
             .with_rollup_address(rollup_address.clone())
             .unwrap()
+            .with_ticketer_address(
+                ContractKt1Hash::from_base58_check(
+                    "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
+            )
+            .unwrap()
             .build()
             .unwrap();
         matches!(
@@ -425,7 +504,8 @@ mod tests {
                 capacity: _,
                 debug_log_path: _,
                 runtime_env: RuntimeEnv::Riscv { kernel_path, rollup_address },
-                inbox_checkpoint_path: _
+                inbox_checkpoint_path: _,
+                ticketer_address: _
             } if kernel_path == PathBuf::from_str("/riscv/kernel").unwrap() && rollup_address == rollup_address
         );
     }
