@@ -1,0 +1,19 @@
+name: Nightly build
+
+on:
+  schedule:
+    - cron: "20 3 * * *" # Runs at 3:20am UTC daily
+
+jobs:
+  build:
+    uses: jstz-dev/jstz/.github/workflows/release.yml@main
+    with:
+      dry_run: true
+      octez_version: 23.3
+      ref: main
+      build_images: true
+      build_cli: true
+      build_sdk: true
+      publish_runtime_api_coverage: true
+      deploy_docs: true
+    secrets: inherit
