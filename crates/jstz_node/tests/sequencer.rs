@@ -114,6 +114,8 @@ async fn run_native_sequencer() {
                 "sequencer",
                 "--injector-key-file",
                 injector_file.path().to_str().unwrap(),
+                "--rollup-address",
+                "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
                 "--ticketer-address",
                 "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
             ])
@@ -208,6 +210,8 @@ async fn restart_native_sequencer() {
                     runtime_db_file.path().to_str().unwrap(),
                     "--inbox-checkpoint-path",
                     inbox_checkpoint_file.path().to_str().unwrap(),
+                    "--rollup-address",
+                    "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
                     "--ticketer-address",
                     "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
                 ])

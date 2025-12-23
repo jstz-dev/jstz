@@ -51,9 +51,11 @@ impl Drop for Worker {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
+    rollup_address: &SmartRollupHash,
     injector: &KeyPair,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
@@ -61,10 +63,7 @@ pub fn spawn(
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     match runtime_env {
-        RuntimeEnv::Riscv {
-            kernel_path,
-            rollup_address,
-        } => spawn_riscv_worker(
+        RuntimeEnv::Riscv { kernel_path } => spawn_riscv_worker(
             queue,
             preimage_dir,
             debug_log_path,
@@ -340,6 +339,7 @@ mod tests {
 
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
     use crate::{sequencer::inbox::test_utils::hash_of, test::default_injector};
+    use jstz_mock::sr1_address;
     use tempfile::NamedTempFile;
 
     #[test]
@@ -350,6 +350,7 @@ mod tests {
         let worker = super::spawn(
             q,
             Db::init(Some("")).unwrap(),
+            &sr1_address(),
             &default_injector(),
             PathBuf::new(),
             None,
@@ -394,6 +395,7 @@ mod tests {
         let _worker = super::spawn(
             wrapper.clone(),
             cp,
+            &sr1_address(),
             &default_injector(),
             PathBuf::new(),
             Some(log_file.path()),

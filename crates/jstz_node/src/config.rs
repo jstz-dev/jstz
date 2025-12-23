@@ -15,10 +15,7 @@ use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 #[serde(tag = "type")]
 pub enum RuntimeEnv {
     Native,
-    Riscv {
-        kernel_path: PathBuf,
-        rollup_address: SmartRollupHash,
-    },
+    Riscv { kernel_path: PathBuf },
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -30,6 +27,7 @@ pub enum RunMode {
         debug_log_path: PathBuf,
         runtime_env: RuntimeEnv,
         inbox_checkpoint_path: PathBuf,
+        rollup_address: SmartRollupHash,
         ticketer_address: ContractKt1Hash,
     },
     #[serde(alias = "default")]
@@ -137,18 +135,9 @@ impl RunModeBuilder {
         Ok(match self.mode {
             RunModeType::Default => RunMode::Default,
             RunModeType::Sequencer => {
-                let runtime_env = match (self.riscv_kernel_path, self.rollup_address) {
-                    (Some(p), Some(addr)) => RuntimeEnv::Riscv {
-                        kernel_path: p,
-                        rollup_address: addr,
-                    },
-                    (None, None) => RuntimeEnv::Native,
-                    (Some(_), None) => anyhow::bail!(
-                        "smart rollup address is not set when riscv kernel path is provided"
-                    ),
-                    (None, Some(_)) => anyhow::bail!(
-                        "riscv kernel path is not set when smart rollup address is provided"
-                    ),
+                let runtime_env = match self.riscv_kernel_path {
+                    Some(p) => RuntimeEnv::Riscv { kernel_path: p },
+                    None => RuntimeEnv::Native,
                 };
                 RunMode::Sequencer {
                     capacity: self.capacity.unwrap_or(1),
@@ -173,7 +162,8 @@ impl RunModeBuilder {
                             )?
                             .to_path_buf(),
                     ),
-                    ticketer_address: self.ticketer_address.ok_or(anyhow::anyhow!("ticketer address is not configured for sequencer"))?
+                    ticketer_address: self.ticketer_address.ok_or(anyhow::anyhow!("ticketer address is not configured for sequencer"))?,
+                    rollup_address: self.rollup_address.ok_or(anyhow::anyhow!("smart rollup address is not configured for sequencer"))?
                 }
             }
         })
@@ -284,6 +274,10 @@ mod tests {
                 "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
             )
             .unwrap(),
+            rollup_address: SmartRollupHash::from_base58_check(
+                "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+            )
+            .unwrap(),
         };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["mode"], "sequencer");
@@ -295,27 +289,31 @@ mod tests {
             json["ticketer_address"],
             "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog"
         );
+        assert_eq!(
+            json["rollup_address"],
+            "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao"
+        );
 
         config.mode = RunMode::Sequencer {
             capacity: 123,
             debug_log_path: PathBuf::from_str("/debug/log").unwrap(),
             runtime_env: RuntimeEnv::Riscv {
                 kernel_path: PathBuf::from_str("/riscv/kernel").unwrap(),
-                rollup_address: SmartRollupHash::from_base58_check(
-                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
-                )
-                .unwrap(),
             },
             inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap(),
             ticketer_address: ContractKt1Hash::from_base58_check(
                 "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
             )
             .unwrap(),
+            rollup_address: SmartRollupHash::from_base58_check(
+                "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+            )
+            .unwrap(),
         };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(
             json["runtime_env"],
-            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel", "rollup_address": "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao"})
+            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel"})
         );
 
         config
@@ -341,6 +339,10 @@ mod tests {
                 inbox_checkpoint_path: PathBuf::new(),
                 ticketer_address: ContractKt1Hash::from_base58_check(
                     "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
+                rollup_address: SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
                 )
                 .unwrap(),
             }
@@ -412,12 +414,33 @@ mod tests {
                 .to_string(),
             "ticketer address is not configured for sequencer"
         );
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Sequencer)
+                .with_ticketer_address(
+                    ContractKt1Hash::from_base58_check(
+                        "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                    )
+                    .unwrap(),
+                )
+                .unwrap()
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "smart rollup address is not configured for sequencer"
+        );
 
         // check default values
         let mode = RunModeBuilder::new(RunModeType::Sequencer)
             .with_ticketer_address(
                 ContractKt1Hash::from_base58_check(
                     "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
+            )
+            .unwrap()
+            .with_rollup_address(
+                SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
                 )
                 .unwrap(),
             )
@@ -431,7 +454,8 @@ mod tests {
                 debug_log_path: _,
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: _,
-                ticketer_address: _
+                ticketer_address: _,
+                rollup_address: _
             }
         );
 
@@ -452,6 +476,13 @@ mod tests {
                     .unwrap()
                 )
                 .unwrap()
+                .with_rollup_address(
+                    SmartRollupHash::from_base58_check(
+                        "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+                    )
+                    .unwrap(),
+                )
+                .unwrap()
                 .build()
                 .unwrap(),
             RunMode::Sequencer {
@@ -462,28 +493,14 @@ mod tests {
                 ticketer_address: ContractKt1Hash::from_base58_check(
                     "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
                 )
-                .unwrap()
+                .unwrap(),
+                rollup_address: SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+                )
+                .unwrap(),
             }
         );
 
-        assert_eq!(
-            RunModeBuilder::new(RunModeType::Sequencer)
-                .with_rollup_address(rollup_address.clone())
-                .unwrap()
-                .build()
-                .unwrap_err()
-                .to_string(),
-            "riscv kernel path is not set when smart rollup address is provided"
-        );
-        assert_eq!(
-            RunModeBuilder::new(RunModeType::Sequencer)
-                .with_riscv_kernel_path(PathBuf::from_str("/riscv/kernel").unwrap())
-                .unwrap()
-                .build()
-                .unwrap_err()
-                .to_string(),
-            "smart rollup address is not set when riscv kernel path is provided"
-        );
         let mode = RunModeBuilder::new(RunModeType::Sequencer)
             .with_riscv_kernel_path(PathBuf::from_str("/riscv/kernel").unwrap())
             .unwrap()
@@ -496,6 +513,13 @@ mod tests {
                 .unwrap(),
             )
             .unwrap()
+            .with_rollup_address(
+                SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+                )
+                .unwrap(),
+            )
+            .unwrap()
             .build()
             .unwrap();
         matches!(
@@ -503,9 +527,10 @@ mod tests {
             RunMode::Sequencer {
                 capacity: _,
                 debug_log_path: _,
-                runtime_env: RuntimeEnv::Riscv { kernel_path, rollup_address },
+                runtime_env: RuntimeEnv::Riscv { kernel_path },
                 inbox_checkpoint_path: _,
-                ticketer_address: _
+                ticketer_address: _,
+                rollup_address: _
             } if kernel_path == PathBuf::from_str("/riscv/kernel").unwrap() && rollup_address == rollup_address
         );
     }

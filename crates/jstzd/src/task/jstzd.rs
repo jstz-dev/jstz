@@ -906,6 +906,10 @@ mod tests {
                         "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
                     )
                     .unwrap(),
+                    rollup_address: SmartRollupHash::from_str(
+                        "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                    )
+                    .unwrap(),
                 },
                 false,
             )),

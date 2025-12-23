@@ -224,6 +224,11 @@ fn build_jstz_node_config(
         run_mode_builder = run_mode_builder.with_ticketer_address(
             ContractKt1Hash::from_base58_check(JSTZ_NATIVE_BRIDGE_ADDRESS)?,
         )?;
+        run_mode_builder = run_mode_builder.with_rollup_address(
+            config
+                .rollup_address
+                .unwrap_or(SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS)?),
+        )?;
     }
     if let Some(v) = config.capacity {
         run_mode_builder = run_mode_builder.with_capacity(v)?;
@@ -234,9 +239,7 @@ fn build_jstz_node_config(
     if let Some(path) = config.riscv_kernel_path {
         run_mode_builder = run_mode_builder.with_riscv_kernel_path(path)?;
     }
-    if let Some(v) = config.rollup_address {
-        run_mode_builder = run_mode_builder.with_rollup_address(v)?;
-    }
+
     Ok(JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         rollup_rpc_endpoint,
@@ -870,6 +873,7 @@ mod tests {
             run_mode["ticketer_address"],
             super::JSTZ_NATIVE_BRIDGE_ADDRESS
         );
+        assert_eq!(run_mode["rollup_address"], super::JSTZ_ROLLUP_ADDRESS);
     }
 
     #[tokio::test]
@@ -915,12 +919,13 @@ mod tests {
         assert_eq!(run_mode["debug_log_path"], "/tmp/log");
         assert_eq!(
             run_mode["runtime_env"],
-            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel", "rollup_address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK"})
+            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel"})
         );
         assert_eq!(
             run_mode["ticketer_address"],
             super::JSTZ_NATIVE_BRIDGE_ADDRESS
         );
+        assert_eq!(run_mode["rollup_address"], super::JSTZ_ROLLUP_ADDRESS);
 
         let bad_config = UserJstzNodeConfig {
             riscv_kernel_path: Some(PathBuf::new()),
