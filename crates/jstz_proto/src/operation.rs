@@ -1,7 +1,7 @@
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::fetch::http::Response;
 use crate::{
-    context::account::{Account, Address, Amount, Nonce},
+    context::account::{Account, Address, Addressable, Amount, Nonce},
     Error, HttpBody, Result,
 };
 use bincode::{Decode, Encode};
@@ -11,7 +11,13 @@ use http::{HeaderMap, Method, Uri};
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::oracle::request::RequestId;
 
+#[cfg(feature = "simulation")]
+use jstz_core::kv::Transaction;
+
 use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
+
+#[cfg(feature = "simulation")]
+use jstz_core::simulation::SimulationRequest;
 use jstz_crypto::verifier::Verifier;
 use jstz_crypto::{
     hash::{Blake2b, Hash},
@@ -38,6 +44,64 @@ pub struct Operation {
 
 pub type OperationHash = Blake2b;
 
+pub(crate) trait NoncePolicy {
+    fn get_nonce(
+        &mut self,
+        hrt: &impl HostRuntime,
+        addr: &impl Addressable,
+    ) -> Result<Nonce>;
+
+    fn set_nonce(
+        &mut self,
+        rt: &mut impl HostRuntime,
+        source: &impl Addressable,
+        next_nonce: Nonce,
+    ) -> Result<()>;
+}
+
+pub(crate) struct StorageNoncePolicy;
+impl NoncePolicy for StorageNoncePolicy {
+    fn get_nonce(
+        &mut self,
+        rt: &impl HostRuntime,
+        source: &impl Addressable,
+    ) -> Result<Nonce> {
+        Account::storage_get_nonce(rt, source)
+    }
+
+    fn set_nonce(
+        &mut self,
+        rt: &mut impl HostRuntime,
+        source: &impl Addressable,
+        next_nonce: Nonce,
+    ) -> Result<()> {
+        Account::storage_set_nonce(rt, source, next_nonce)
+    }
+}
+
+#[cfg(feature = "simulation")]
+pub(crate) struct TransactionNoncePolicy<'a>(&'a mut Transaction);
+#[cfg(feature = "simulation")]
+impl<'a> NoncePolicy for TransactionNoncePolicy<'a> {
+    fn get_nonce(
+        &mut self,
+        rt: &impl HostRuntime,
+        source: &impl Addressable,
+    ) -> Result<Nonce> {
+        let nonce = Account::nonce(rt, &mut self.0, source)?;
+        Ok(nonce.clone())
+    }
+
+    fn set_nonce(
+        &mut self,
+        rt: &mut impl HostRuntime,
+        source: &impl Addressable,
+        next_nonce: Nonce,
+    ) -> Result<()> {
+        Account::set_nonce(rt, self.0, source, next_nonce)
+    }
+}
+
 impl Operation {
     /// Returns the source of the operation
     pub fn source(&self) -> PublicKeyHash {
@@ -53,12 +117,17 @@ impl Operation {
         &self.content
     }
 
-    /// Verify the nonce of the operation
-    /// If valid, increment the nonce and leak as storage update event.
-    pub fn verify_and_increment_nonce(&self, rt: &mut impl HostRuntime) -> Result<()> {
-        let expected_nonce = Account::storage_get_nonce(rt, &self.source())?;
+    /// Verify and increment the nonce of the operation based
+    /// on the nonce policy
+    pub(crate) fn verify_and_increment_nonce<S: NoncePolicy>(
+        &self,
+        rt: &mut impl HostRuntime,
+        nonce_policy: &mut S,
+    ) -> Result<()> {
+        let expected_nonce = nonce_policy.get_nonce(rt, &self.source())?;
+        let next_nonce = expected_nonce.next();
         if self.nonce == expected_nonce {
-            Account::storage_set_nonce(rt, &self.source(), expected_nonce.next())?;
+            nonce_policy.set_nonce(rt, &self.source(), next_nonce)?;
             Ok(())
         } else if self.nonce.0 < expected_nonce.0 {
             Err(Error::NoncePassed)
@@ -227,11 +296,14 @@ impl Content {
     Debug, Deref, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
 )]
 pub struct SignedOperation {
-    signature: Signature,
+    pub(crate) signature: Signature,
     #[deref]
-    inner: Operation,
+    pub(crate) inner: Operation,
     #[serde(default)]
-    verifier: Option<Verifier>,
+    pub(crate) verifier: Option<Verifier>,
+    #[cfg(feature = "simulation")]
+    #[serde(default)]
+    pub(crate) simulation_request: Option<SimulationRequest>,
 }
 
 impl SignedOperation {
@@ -240,6 +312,8 @@ impl SignedOperation {
             signature,
             inner,
             verifier: None,
+            #[cfg(feature = "simulation")]
+            simulation_request: None,
         }
     }
 
@@ -265,6 +339,32 @@ impl SignedOperation {
     pub fn verify_ref(&self) -> Result<&Operation> {
         self.verify()?;
         Ok(&self.inner)
+    }
+
+    /// Verify and increment the nonce of the operation directly in durable
+    /// storage.
+    ///
+    /// If the operation is a simulated operation, nonce read/writes happen in the
+    /// Transaction.
+    pub fn verify_and_increment_nonce(
+        &self,
+        rt: &mut impl HostRuntime,
+        #[cfg(feature = "simulation")] tx: &mut Transaction,
+    ) -> Result<()> {
+        #[cfg(feature = "simulation")]
+        if self.is_simulation() {
+            return self
+                .inner
+                .verify_and_increment_nonce(rt, &mut TransactionNoncePolicy(tx));
+        }
+
+        self.inner
+            .verify_and_increment_nonce(rt, &mut StorageNoncePolicy)
+    }
+
+    #[cfg(feature = "simulation")]
+    pub fn is_simulation(&self) -> bool {
+        self.simulation_request.is_some()
     }
 }
 
@@ -527,13 +627,17 @@ mod test {
     use super::{Operation, SignedOperation};
     use crate::context::account::{Account, Address, Nonce};
     use crate::operation::internal::{FaDeposit, InboxId};
-    use crate::operation::OperationHash;
+    #[cfg(feature = "simulation")]
+    use crate::operation::TransactionNoncePolicy;
+    use crate::operation::{NoncePolicy, OperationHash, StorageNoncePolicy};
     use crate::tests::DebugLogSink;
     use crate::Error::*;
     use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::event::decode_line;
     use jstz_core::kv::storage_update::BatchStorageUpdate;
+    #[cfg(feature = "simulation")]
+    use jstz_core::kv::Transaction;
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::BinEncodable;
     use jstz_crypto::hash::Hash;
@@ -653,7 +757,9 @@ mod test {
         let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
         hrt.set_debug_handler(sink);
         let operation = dummy_operation(jstz_mock::pk1(), nonce);
-        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_ok());
+        assert!(operation
+            .verify_and_increment_nonce(hrt.rt(), &mut StorageNoncePolicy)
+            .is_ok());
         let updated_nonce =
             Account::storage_get_nonce(hrt.rt(), &jstz_mock::pkh1()).unwrap();
         let line = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
@@ -670,22 +776,51 @@ mod test {
         hrt.set_debug_handler(sink);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(42));
-        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_err());
+        assert!(operation
+            .verify_and_increment_nonce(hrt.rt(), &mut StorageNoncePolicy)
+            .is_err());
         assert!(String::from_utf8(buf.lock().unwrap().to_vec())
             .unwrap()
             .is_empty());
+
+        #[cfg(feature = "simulation")]
+        {
+            let mut tx = Transaction::default();
+            tx.begin();
+            assert!(operation
+                .verify_and_increment_nonce(
+                    hrt.rt(),
+                    &mut TransactionNoncePolicy(&mut tx)
+                )
+                .is_err());
+            assert!(String::from_utf8(buf.lock().unwrap().to_vec())
+                .unwrap()
+                .is_empty());
+        }
     }
 
-    #[test]
-    fn test_verify_nonce_prevents_replay() {
+    fn _test_verify_nonce_prevents_replay(s: &mut impl NoncePolicy) {
         let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(7));
 
-        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_ok());
+        assert!(operation.verify_and_increment_nonce(hrt.rt(), s).is_ok());
 
         // Replaying the operation fails
-        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_err());
+        assert!(operation.verify_and_increment_nonce(hrt.rt(), s).is_err());
+    }
+
+    #[test]
+    fn test_verify_nonce_prevents_replay_storage_nonce_policy() {
+        _test_verify_nonce_prevents_replay(&mut StorageNoncePolicy);
+    }
+
+    #[cfg(feature = "simulation")]
+    #[test]
+    fn test_verify_nonce_prevents_replay_tx_nonce_policy() {
+        let mut tx = Transaction::default();
+        tx.begin();
+        _test_verify_nonce_prevents_replay(&mut TransactionNoncePolicy(&mut tx));
     }
 
     #[test]
@@ -796,11 +931,7 @@ mod test {
             }),
         };
         let signature = alice_sk.sign(op.hash()).unwrap();
-        let signed_op = SignedOperation {
-            signature,
-            inner: op,
-            verifier: None,
-        };
+        let signed_op = SignedOperation::new(signature, op);
         let json = serde_json::to_vec(&signed_op).unwrap();
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
 
@@ -909,5 +1040,41 @@ mod test {
                 }
             }
         ));
+    }
+}
+
+#[cfg(all(test, feature = "simulation"))]
+mod simulation_tests {
+    use http::{HeaderMap, Method};
+    use jstz_core::{simulation::SimulationRequest, BinEncodable};
+    use jstz_crypto::{public_key::PublicKey, signature::Signature};
+
+    use crate::{
+        operation::{Operation, SignedOperation},
+        HttpBody,
+    };
+
+    #[test]
+    fn test_signed_operation_bincode_roundtrip() {
+        let signed_operation = SignedOperation {
+            signature: Signature::from_base58("edsigtw2cT2ZqcPoBXUHb6TgrAJbDgzwRwDNQfV9uzgDxFvanhm6tQpkiTyR6sMKsbGjK5QCv4qj9kWAs9e7yEmbuiKq7jMMaxa").unwrap(),
+            inner: Operation {
+                public_key: PublicKey::from_base58("edpkuifh2JiPVYfEM4LuGBcPjhHR1GS88bc4ciNUqg15UcWM5zjFmn").unwrap(),
+                nonce: 0.into(),
+                content: crate::operation::RunFunction {
+                    uri: "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold".parse().unwrap(),
+                    method: Method::GET,
+                    headers: HeaderMap::new(),
+                    body: HttpBody(None),
+                    gas_limit: 1000,
+                }.into()
+            },
+            verifier: None,
+            simulation_request: Some(SimulationRequest::new(10))
+        };
+
+        let encoded = signed_operation.encode().unwrap();
+        let decoded = SignedOperation::decode(&encoded).unwrap();
+        assert_eq!(signed_operation, decoded);
     }
 }

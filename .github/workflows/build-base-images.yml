@@ -37,10 +37,11 @@ jobs:
             dockerfile: ./images/build_cli.Dockerfile
     uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
     with:
-      octez-tag: "" # This value is not referenced by the base docker files
-      docker_registry: ghcr.io
-      docker_image_base: jstz-dev/jstz
-      image: ${{ matrix.image }}
+      octez_version: "" # This value is not referenced by the base docker files
+      image_names: |
+        ghcr.io/jstz-dev/jstz/${{ matrix.image }}
+        docker.io/jstzdev/${{ matrix.image }}
+      image_id: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
       kernel_artifact_name: dummy
       dry_run: ${{ inputs.dry_run }}

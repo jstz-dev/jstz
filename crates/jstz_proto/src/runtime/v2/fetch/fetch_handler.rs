@@ -1602,45 +1602,55 @@ mod test {
     fn transfer_rejects_when_invalid() {
         TOKIO.block_on(async {
             let run = SIMPLE_REMOTE_CALLER;
-            let remote = r#"
-            export default async (req) => {
-                return new Response(null, {
-                    headers: {
-                        "X-JSTZ-TRANSFER": 100
-                    }
-                })
-            }
-        "#;
-
+            let remote1 = r#"
+                export default async (req) => {
+                    return new Response(null, {
+                        headers: {
+                            "X-JSTZ-TRANSFER": 100
+                        }
+                    })
+                }
+            "#;
+            let remote2 = r#"
+                export default async (req) => {
+                    return Response.withTransfer(null, 100);
+                }
+            "#;
             // Setup
             let mut host = tezos_smart_rollup_mock::MockHost::default();
-            let (mut host, tx, _, hashes) = setup(&mut host, [run, remote]);
-            let run_address = hashes[0].clone();
-            let remote_address = hashes[1].clone();
+            for remote in [remote1, remote2] {
+                let (mut host, tx, _, hashes) = setup(&mut host, [run, remote]);
+                let run_address = hashes[0].clone();
+                let remote_address = hashes[1].clone();
 
-            // Run
-            let response = process_and_dispatch_request(
-                JsHostRuntime::new(&mut host),
-                tx.clone(),
-                false,
-                None,
-                jstz_mock::account1().into(),
-                jstz_mock::account1().into(),
-                "GET".into(),
-                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                // Run
+                let response = process_and_dispatch_request(
+                    JsHostRuntime::new(&mut host),
+                    tx.clone(),
+                    false,
+                    None,
+                    jstz_mock::account1().into(),
+                    jstz_mock::account1().into(),
+                    "GET".into(),
+                    Url::parse(
+                        format!("jstz://{}/{}", run_address, remote_address).as_str(),
+                    )
                     .unwrap(),
-                vec![],
-                None,
-                Limiter::default(),
-            )
-            .await;
+                    vec![],
+                    None,
+                    Limiter::default(),
+                )
+                .await;
 
-            assert_eq!(500, response.status);
-            assert_eq!(
-                json!({"class":"RuntimeError","message":"InsufficientFunds"}),
-                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                assert_eq!(500, response.status);
+                assert_eq!(
+                    json!({"class":"RuntimeError","message":"InsufficientFunds"}),
+                    serde_json::from_slice::<JsonValue>(
+                        response.body.to_vec().as_slice()
+                    )
                     .unwrap()
-            )
+                )
+            }
         })
     }
 

@@ -52,7 +52,11 @@ async fn execute_operation_inner(
                 &reveal.root_hash,
             )?;
             signed_op.verify()?;
-            signed_op.verify_and_increment_nonce(hrt)?;
+            signed_op.verify_and_increment_nonce(
+                hrt,
+                #[cfg(feature = "simulation")]
+                tx,
+            )?;
             let revealed_op: Operation = signed_op.into();
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(
@@ -114,9 +118,18 @@ pub async fn execute_operation(
     ticketer: &ContractKt1Hash,
     injector: &PublicKey,
 ) -> Receipt {
-    let validity = signed_operation
-        .verify()
-        .and_then(|_| signed_operation.verify_and_increment_nonce(hrt));
+    #[cfg(feature = "simulation")]
+    if signed_operation.is_simulation() {
+        tx.set_simulation();
+    }
+
+    let validity = signed_operation.verify().and_then(|_| {
+        signed_operation.verify_and_increment_nonce(
+            hrt,
+            #[cfg(feature = "simulation")]
+            tx,
+        )
+    });
     let op = signed_operation.into();
     let op_hash = resolve_operation_hash(&op);
     let result = match validity {
@@ -582,5 +595,59 @@ mod tests {
             }
             if s.contains("Ed25519 error: signature error")
         ));
+    }
+
+    #[cfg(feature = "simulation")]
+    #[tokio::test]
+    pub async fn simulate_skips_commit() {
+        use jstz_core::{kv::Storage, simulation::SimulationRequest};
+        use tezos_smart_rollup::storage::path::OwnedPath;
+
+        // Setup
+        let (_, pk1, sk1) = bootstrap1();
+        let mut run_op = make_signed_op(
+            Content::RunFunction(RunFunction {
+                uri: Uri::try_from(
+                    "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
+                )
+                .unwrap(),
+                method: Method::GET,
+                headers: HeaderMap::new(),
+                body: HttpBody::empty(),
+                gas_limit: 10000,
+            }),
+            pk1.clone(),
+            sk1,
+        );
+        let hash = run_op.hash();
+        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+        let receipt_path =
+            OwnedPath::try_from(format!("/jstz_receipt/{}", hash)).unwrap();
+
+        // Without simulation request
+        let mut host = MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let receipt =
+            execute_operation(&mut host, &mut tx, run_op.clone(), &ticketer, &pk1).await;
+        receipt.write(&host, &mut tx).unwrap();
+        tx.commit(&mut host).unwrap();
+        assert!(Storage::get::<Receipt>(&host, &receipt_path)
+            .unwrap()
+            .is_some());
+
+        // With simulation request
+        let simulation_request = SimulationRequest::new(1);
+        let mut host = MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+        run_op.simulation_request = Some(simulation_request);
+        let receipt =
+            execute_operation(&mut host, &mut tx, run_op.clone(), &ticketer, &pk1).await;
+        receipt.write(&host, &mut tx).unwrap();
+        tx.commit(&mut host).unwrap();
+        assert!(Storage::get::<Receipt>(&host, &receipt_path)
+            .unwrap()
+            .is_none());
     }
 }

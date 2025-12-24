@@ -261,7 +261,6 @@ impl Account {
     }
 
     /// Sets the nonce of an account and publishes the storage update event.
-    /// The storage needs to be leaked because the nonce isn't updated via the transaction.
     pub fn storage_set_nonce(
         hrt: &mut impl HostRuntime,
         addr: &impl Addressable,
@@ -347,6 +346,26 @@ impl Account {
         ));
         tx.set_dirty(is_dirty);
         result
+    }
+
+    #[cfg(feature = "simulation")]
+    /// Sets nonce of account through the Transaction cache
+    /// This function should only be used in simulation mode
+    pub fn set_nonce<'a>(
+        hrt: &impl HostRuntime,
+        tx: &'a mut Transaction,
+        addr: &impl Addressable,
+        next_nonce: Nonce,
+    ) -> Result<()> {
+        let is_dirty = tx.get_dirty();
+        let mut account = Self::get_mut(hrt, tx, addr)?;
+        let nonce = match account.deref_mut() {
+            Self::User(UserAccount { nonce, .. }) => nonce,
+            Self::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
+        };
+        *nonce = next_nonce;
+        tx.set_dirty(is_dirty);
+        Ok(())
     }
 
     pub fn create_smart_function(

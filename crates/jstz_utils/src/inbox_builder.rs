@@ -206,6 +206,45 @@ impl InboxBuilder {
         ))
     }
 
+    fn fa_deposit_payload(
+        ticketer: &ContractKt1Hash,
+        account: &Account,
+        amount_mutez: u64,
+    ) -> DepositInboxMsgPayloadType {
+        MichelsonOr::Right(MichelsonPair(
+            MichelsonContract(Contract::Implicit(
+                PublicKeyHash::from_b58check(&account.address.to_string())
+                    .expect("serialised address should be parsable"),
+            )),
+            MichelsonPair(
+                MichelsonOption(None),
+                Ticket::new(
+                    Contract::Originated(ticketer.clone()),
+                    MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                    amount_mutez,
+                )
+                .expect("ticket creation from ticketer should work"),
+            ),
+        ))
+    }
+
+    pub fn fa_deposit_from_l1(
+        &mut self,
+        account: &Account,
+        amount_mutez: u64,
+    ) -> Result<()> {
+        match &self.ticketer_address {
+            Some(ticketer) => {
+                let ticketer = ticketer.clone();
+                self.transfer_from_l1(
+                    &ticketer,
+                    Self::fa_deposit_payload(&ticketer, account, amount_mutez),
+                )
+            }
+            None => Err("ticketer address is not provided".into()),
+        }
+    }
+
     pub fn deposit_from_l1(
         &mut self,
         account: &Account,
@@ -213,23 +252,34 @@ impl InboxBuilder {
     ) -> Result<()> {
         match &self.ticketer_address {
             Some(ticketer) => {
-                let message = self.generate_internal_messge(
-                    InternalInboxMessage::Transfer(Transfer {
-                        sender: ticketer.clone(),
-                        // any user address is okay here since L1 is not really involved
-                        source: PublicKeyHash::from_b58check(
-                            "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
-                        )
-                        .expect("the constant source address should be parsable"),
-                        destination: self.rollup_address.clone(),
-                        payload: Self::deposit_payload(ticketer, account, amount_mutez),
-                    }),
-                )?;
-                self.messages.push(message);
-                Ok(())
+                let ticketer = ticketer.clone();
+                self.transfer_from_l1(
+                    &ticketer,
+                    Self::deposit_payload(&ticketer, account, amount_mutez),
+                )
             }
             None => Err("ticketer address is not provided".into()),
         }
+    }
+
+    fn transfer_from_l1(
+        &mut self,
+        ticketer: &ContractKt1Hash,
+        payload: DepositInboxMsgPayloadType,
+    ) -> Result<()> {
+        let message =
+            self.generate_internal_messge(InternalInboxMessage::Transfer(Transfer {
+                sender: ticketer.clone(),
+                // any user address is okay here since L1 is not really involved
+                source: PublicKeyHash::from_b58check(
+                    "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
+                )
+                .expect("the constant source address should be parsable"),
+                destination: self.rollup_address.clone(),
+                payload,
+            }))?;
+        self.messages.push(message);
+        Ok(())
     }
 
     pub fn withdraw(
@@ -543,6 +593,56 @@ mod tests {
                         assert_eq!(transfer.destination, builder.rollup_address);
                         assert_eq!(transfer.sender, builder.ticketer_address.unwrap());
                         assert!(matches!(transfer.payload, MichelsonOr::Left(_)));
+                    }
+                    _ => panic!("should be internal message"),
+                }
+            }
+            _ => panic!("should be raw message"),
+        }
+    }
+
+    #[test]
+    fn fa_deposit_from_l1() {
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
+        let account = builder.create_accounts(1).unwrap().pop().unwrap();
+        assert_eq!(
+            builder
+                .fa_deposit_from_l1(&account, 1)
+                .unwrap_err()
+                .to_string(),
+            "ticketer address is not provided"
+        );
+
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            Some(
+                ContractKt1Hash::from_base58_check(
+                    "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5",
+                )
+                .unwrap(),
+            ),
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
+        builder.fa_deposit_from_l1(&account, 1).unwrap();
+        assert_eq!(builder.messages.len(), 1);
+        match builder.messages.pop().unwrap() {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) =
+                    InboxMessage::<DepositInboxMsgPayloadType>::parse(&raw).unwrap();
+                match inbox_msg {
+                    InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
+                        assert_eq!(transfer.destination, builder.rollup_address);
+                        assert_eq!(transfer.sender, builder.ticketer_address.unwrap());
+                        assert!(matches!(transfer.payload, MichelsonOr::Right(_)));
                     }
                     _ => panic!("should be internal message"),
                 }

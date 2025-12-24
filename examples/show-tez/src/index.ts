@@ -5,7 +5,7 @@ import { readFileSync } from "fs";
 import * as readline from "readline";
 import untildify from "untildify";
 
-import * as signer from "jstz_sdk";
+import * as signer from "@jstz-dev/jstz_sdk";
 
 // Accept a smart function address and message and put together a request
 function buildRequest(

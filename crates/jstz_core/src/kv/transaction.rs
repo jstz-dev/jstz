@@ -69,6 +69,8 @@ pub struct InnerTransaction {
     persistent_outbox: PersistentOutboxQueue,
     snapshot_outbox_len: u32,
     dirty: bool,
+    #[cfg(feature = "simulation")]
+    is_simulation: bool,
 }
 
 type GuardInner = ArcMutexGuard<RawMutex, InnerTransaction>;
@@ -346,6 +348,13 @@ impl InnerTransaction {
 
             prev_ctxt.outbox_queue.extend(curr_ctxt.outbox_queue);
         } else {
+            #[cfg(feature = "simulation")]
+            if self.is_simulation {
+                // Skip writing to durable storage if this is
+                // a simulation
+                return Ok(());
+            }
+
             let mut storage_updates = BatchStorageUpdate::new(
                 curr_ctxt.remove_edits.len() + curr_ctxt.insert_edits.len(),
             );
@@ -547,6 +556,13 @@ impl Transaction {
         let rc = self.acquire_guard().unwrap();
         let mut inner = rc.borrow_mut();
         inner.dirty = value
+    }
+
+    #[cfg(feature = "simulation")]
+    pub fn set_simulation(&self) {
+        let rc = self.acquire_guard().unwrap();
+        let mut inner = rc.borrow_mut();
+        inner.is_simulation = true
     }
 }
 
@@ -1281,5 +1297,31 @@ mod tests {
         // Commit tx1 does not publish any events
         tx.commit(&mut hrt).unwrap();
         assert!(sink.lines().first().unwrap().is_empty());
+    }
+
+    #[cfg(feature = "simulation")]
+    #[test]
+    fn storage_commit_skipped_if_simulation() {
+        let mut sink = Sink(Vec::new());
+        let mut hrt = MockHost::default();
+        let tx = Transaction::default();
+        tx.set_simulation();
+        hrt.set_debug_handler(unsafe {
+            std::mem::transmute::<&mut std::vec::Vec<u8>, &'static mut Vec<u8>>(
+                &mut sink.0,
+            )
+        });
+
+        let path = OwnedPath::try_from("/key1".to_string()).unwrap();
+        tx.begin();
+        tx.insert(path.clone(), 42).unwrap();
+        tx.commit(&mut hrt).unwrap();
+
+        // weirdly, default output of sink is [""]
+        assert!(sink.lines().len() == 1);
+        assert!(sink.lines().first().unwrap().is_empty());
+
+        let tx = Transaction::default();
+        assert!(tx.get::<u8>(&mut hrt, path).unwrap().is_none());
     }
 }

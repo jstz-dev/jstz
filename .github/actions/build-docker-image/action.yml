@@ -6,33 +6,27 @@ inputs:
   arch:
     description: Architecture of CPU that the binary can run on, e.g. arm64, amd64
     required: true
-  repo_token:
-    description: API token that gives access to manage the target repo
+  octez_version:
+    description: Version of the octez package to be used for the image
     required: true
-  octez-tag:
-    description: "tezos/tezos docker tag to be used"
+  image_names:
+    description: List of image base names for tags, e.g. ghcr.io/jstz-dev/jstz/jstzd, docker.io/jstzdev/jstzd. More than one name can be accepted. This input value should be a newline-delimited string
     required: true
-  docker_registry:
-    description: Docker registry
+    type: string
+  image_id:
+    description: Local identifier for an image build. This is not reflected in the actual built images
     required: true
-  docker_registry_username:
-    description: Docker registry username
-    required: true
-  docker_registry_password:
-    description: Docker registry password
-    required: true
-  docker_image_base:
-    description: Docker image base
-    required: true
-  image:
-    description: Image
-    required: true
+    type: string
   dockerfile:
     description: Dockerfile
     required: true
   kernel_artefact_name:
     description: Kernel artefact name
     required: true
+  lightweight_kernel_artefact_name:
+    description: Lightweight kernel artefact name
+    required: false
+    default: "lightweight-kernel-executable"
   dry_run:
     description: Dry-run image build without pushing to the registry
     required: false
@@ -64,26 +58,25 @@ runs:
       shell: bash
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    - name: Login to Docker registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ inputs.docker_registry }}
-        username: ${{ inputs.docker_registry_username }}
-        password: ${{ inputs.docker_registry_password }}
     - name: Download jstz-kernel artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: ${{ inputs.kernel_artefact_name }}
+        path: jstz_kernel
+    - name: Download lightweight kernel artifact
+      uses: actions/download-artifact@v5
+      with:
+        name: ${{ inputs.lightweight_kernel_artefact_name }}
         path: jstz_kernel
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v3
       with:
-        images: ${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}
+        images: ${{ inputs.image_names }}
         tags: |
           type=ref,event=tag
-          type=raw,value=${{ inputs.ref }}
-          type=raw,value=${{ steps.set-values.outputs.short_sha }}
+          type=raw,value=${{ inputs.ref }},enable=${{ !startsWith(steps.set-values.outputs.sha, inputs.ref) }}
+          type=raw,value=${{ steps.set-values.outputs.short_sha }},enable=${{ startsWith(steps.set-values.outputs.sha, inputs.ref) }}
           # {{sha}} is not the right value here because that refers to the commit that triggered
           # the run, which is not the same as inputs.ref in most cases
         labels: |
@@ -98,23 +91,25 @@ runs:
         context: .
         file: ${{ inputs.dockerfile }}
         build-args: |
-          OCTEZ_TAG=${{ inputs.octez-tag }}
+          OCTEZ_VERSION=${{ inputs.octez_version }}
           KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
+          LIGHTWEIGHT_KERNEL_PATH=./jstz_kernel/lightweight-kernel-executable
         cache-from: type=gha
         cache-to: type=gha,mode=max
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.platform }}
-        outputs: type=image,"name=${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}",push-by-digest=true,name-canonical=true,"push=${{ steps.set-values.outputs.push }}"
+        tags: ${{ inputs.image_names }}
+        outputs: type=image,push-by-digest=true,name-canonical=true,"push=${{ steps.set-values.outputs.push }}"
     - name: Export digest
       shell: bash
       run: |
-        mkdir -p ${{ runner.temp }}/digests/${{ inputs.image }}
+        mkdir -p ${{ runner.temp }}/digests/${{ inputs.image_id }}
         digest="${{ steps.build-image.outputs.digest }}"
-        touch "${{ runner.temp }}/digests/${{ inputs.image }}/${digest#sha256:}"
+        touch "${{ runner.temp }}/digests/${{ inputs.image_id }}/${digest#sha256:}"
     - name: Upload digest
       uses: actions/upload-artifact@v4
       with:
-        name: digests-${{ inputs.image }}-${{ inputs.platform }}-${{ inputs.arch }}
-        path: ${{ runner.temp }}/digests/${{ inputs.image }}/*
+        name: digests-${{ inputs.image_id }}-${{ inputs.platform }}-${{ inputs.arch }}
+        path: ${{ runner.temp }}/digests/${{ inputs.image_id }}/*
         if-no-files-found: error
         retention-days: 1

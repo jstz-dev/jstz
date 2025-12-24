@@ -74,7 +74,7 @@ path = "src/main.rs"
 
 [features]
 persistent-logging = []
-v2_runtime = ["jstz_proto/v2_runtime", "jstz_kernel/v2_runtime"]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_kernel/v2_runtime", "jstz_utils/v2_runtime"]
 blueprint = []
 oracle = ["v2_runtime"]
 inject_inbox = []

@@ -15,6 +15,7 @@ use jstz_utils::KeyPair;
 use jstzd::jstz_rollup_path::*;
 
 use http::Uri;
+use jstzd::jstz_rollup_path;
 use jstzd::task::jstzd::{JstzdConfig, JstzdServer};
 use jstzd::task::utils::retry;
 use jstzd::{BOOTSTRAP_CONTRACT_NAMES, JSTZ_ROLLUP_ADDRESS};
@@ -120,8 +121,9 @@ async fn create_jstzd_server(
         .build()
         .unwrap();
 
-    let (rollup_kernel_installer, rollup_preimages_dir, rollup_parameters_ty) =
-        jstz_rollup_files();
+    let (rollup_preimages_dir, rollup_parameters_ty) = jstz_rollup_files();
+
+    let kernel = jstz_rollup_path::riscv_kernel_descriptor();
 
     let protocol_params = ProtocolParameterBuilder::new()
         // this is the activator account
@@ -135,10 +137,8 @@ async fn create_jstzd_server(
         ])
         .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(
             JSTZ_ROLLUP_ADDRESS,
-            SmartRollupPvmKind::Wasm,
-            fs::read_to_string(rollup_kernel_installer.as_path())
-                .unwrap()
-                .as_str(),
+            SmartRollupPvmKind::Riscv,
+            &hex::encode(&kernel),
             Value::from_str(fs::read_to_string(rollup_parameters_ty).unwrap().as_str())
                 .expect("failed to stringify JSON"),
         )
@@ -169,7 +169,7 @@ async fn create_jstzd_server(
         octez_client_config.base_dir().into(),
         SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
         JSTZ_ROLLUP_OPERATOR_ALIAS.to_string(),
-        rollup_kernel_installer,
+        jstz_rollup_path::riscv_kernel_path(),
         None,
     )
     .set_data_dir(RollupDataDir::TempWithPreImages {
@@ -340,12 +340,8 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
     );
 }
 
-fn jstz_rollup_files() -> (PathBuf, PathBuf, PathBuf) {
-    (
-        kernel_installer_path(),
-        preimages_path(),
-        parameters_ty_path(),
-    )
+fn jstz_rollup_files() -> (PathBuf, PathBuf) {
+    (preimages_path(), parameters_ty_path())
 }
 
 async fn read_bootstrap_contracts() -> Vec<BootstrapContract> {

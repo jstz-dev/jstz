@@ -115,6 +115,7 @@ serde-wasm-bindgen = "0.6.5"
 serde_json = "1.0.107"
 serde_with = { version = "3.6.1", features = ["macros", "base64"] }
 serde_bytes = "0.11.17"
+sha2 = "0.10.9"
 signal-hook = "0.3.17"
 simple_asn1 = "0.6.3"
 syntect = "5.2.0"
@@ -139,7 +140,7 @@ ron = "0.8"
 
 [workspace.dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"
-branch = "leo/extend-fetch-base"
+branch = "leo/request-response-transfer"
 features = ["sandbox"]
 default-features = false
 
@@ -198,6 +199,10 @@ git = "https://github.com/jstz-dev/tezos"
 rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-installer-config]
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+
+[workspace.dependencies.tezos-smart-rollup-constants]
 git = "https://github.com/jstz-dev/tezos"
 rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 

@@ -9,6 +9,7 @@ use jstz_node::{
     RunOptions,
 };
 use jstz_utils::key_pair::parse_key_file;
+use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_crypto_rs::hash::SmartRollupHash;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
@@ -71,8 +72,11 @@ struct Args {
     #[arg(long)]
     injector_key_file: PathBuf,
 
-    #[arg(long)]
+    #[arg(long, required_if_eq("mode", "sequencer"))]
     rollup_address: Option<String>,
+
+    #[arg(long, required_if_eq("mode", "sequencer"))]
+    ticketer_address: Option<String>,
 
     #[arg(long)]
     riscv_kernel_path: Option<PathBuf>,
@@ -111,6 +115,10 @@ async fn main() -> anyhow::Result<()> {
             }
             if let Some(path) = args.inbox_checkpoint_path {
                 run_mode_builder = run_mode_builder.with_inbox_checkpoint_path(path)?;
+            }
+            if let Some(addr) = args.ticketer_address {
+                run_mode_builder = run_mode_builder
+                    .with_ticketer_address(ContractKt1Hash::from_base58_check(&addr)?)?;
             }
             jstz_node::run(RunOptions {
                 addr: args.addr,

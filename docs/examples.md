@@ -59,8 +59,8 @@ https://github.com/jstz-dev/jstz/tree/main/examples
 
 ### Web application with wallet integration
 
-The example [`web-call-to-jstz`](https://github.com/jstz-dev/dev-wallet/tree/main/examples/web-call-to-jstz) is a web application that signs transactions with the Jstz development wallet.
-It requires you to install the dev wallet as described in the repository README: https://github.com/jstz-dev/dev-wallet.
+The example [`web-call-to-jstz`](https://github.com/jstz-dev/dev-wallet/tree/main/apps/examples/web-call-to-jstz) is a web application that signs transactions with the Jstz development wallet.
+It requires you to install the dev wallet as described in the repository [README](https://github.com/jstz-dev/dev-wallet).
 It calls the [Counter](#counter) smart function, but you could change it to call other smart functions.
 
 For a walkthrough of setting up and running this application, see the [Quick start](/quick_start).

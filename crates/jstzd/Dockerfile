@@ -1,4 +1,4 @@
-ARG OCTEZ_VERSION=23.2
+ARG OCTEZ_VERSION=23.3
 ARG FEATURES="build-image,oracle,blueprint"
 FROM ghcr.io/jstz-dev/jstz/build:7f08c1b AS builder
 
@@ -7,9 +7,11 @@ ADD . .
 ARG KERNEL_PATH
 # set default path to a non-existent path such that docker ignores the copy when the path is not given
 ARG BOOTSTRAP_ACCOUNT_PATH="/nonexistent_path"
+ARG LIGHTWEIGHT_KERNEL_PATH
 ARG FEATURES
 COPY $BOOTSTRAP_ACCOUNT_PATH* crates/jstzd/resources/bootstrap_account/accounts.json
 COPY $KERNEL_PATH crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+COPY $LIGHTWEIGHT_KERNEL_PATH crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable
 # release build is required for rust-embed to pack the resource files into the executable
 RUN KERNEL_DEST_DIR=/jstzd_kernel_files cargo build --bin jstzd --release --features "$FEATURES"
 
