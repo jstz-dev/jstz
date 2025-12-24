@@ -4,7 +4,7 @@ use jstz_crypto::smart_function_hash::{Kt1Hash, SmartFunctionHash};
 use jstz_kernel::inbox::{
     parse_inbox_message_hex, Message, ParsedInboxMessage, RollupType,
 };
-use jstz_node::sequencer::{inbox::api::BlockResponse, runtime::JSTZ_ROLLUP_ADDRESS};
+use jstz_node::sequencer::inbox::api::BlockResponse;
 use jstz_proto::{
     context::account::{Address, Nonce},
     executor::fa_deposit::FaDepositReceipt,
@@ -58,6 +58,8 @@ impl jstz_core::host::WriteDebug for DummyLogger {
 }
 
 const DEFAULT_ROLLUP_NODE_RPC: &str = "127.0.0.1:8932";
+const ROLLUP_ADDRESS: &str = "sr1RYurGZtN8KNSpkMcCt9CgWeUaNkzsAfXf";
+const TICKETER_ADDRESS: &str = "KT1BRd2ka5q2cPRdXALtXD1QZ38CPam2j1ye";
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn run_native_sequencer() {
@@ -127,9 +129,9 @@ async fn run_native_sequencer() {
                 "--injector-key-file",
                 injector_file.path().to_str().unwrap(),
                 "--rollup-address",
-                "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                ROLLUP_ADDRESS,
                 "--ticketer-address",
-                "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
+                TICKETER_ADDRESS,
             ])
             .spawn()
             .unwrap(),
@@ -231,9 +233,9 @@ async fn restart_native_sequencer() {
                     "--inbox-checkpoint-path",
                     inbox_checkpoint_file.path().to_str().unwrap(),
                     "--rollup-address",
-                    "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                    ROLLUP_ADDRESS,
                     "--ticketer-address",
-                    "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
+                    TICKETER_ADDRESS,
                 ])
                 .spawn()
                 .unwrap(),
@@ -418,9 +420,9 @@ async fn run_riscv_sequencer() {
                 "--riscv-kernel-path",
                 riscv_kernel_path.to_str().unwrap(),
                 "--rollup-address",
-                "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                ROLLUP_ADDRESS,
                 "--ticketer-address",
-                "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
+                TICKETER_ADDRESS,
             ])
             .spawn()
             .unwrap(),
@@ -726,15 +728,10 @@ fn mock_deploy_op() -> SignedOperation {
 // Note that `inbox_id` must match the level and the index of the actual level and index of
 // the message when it gets inserted into the mock rollup rpc server.
 fn mock_deposit_op(dst: &str, amount_mutez: u64, inbox_id: InboxId) -> (String, String) {
-    // Default rollup address (will be made configurable later)
-    let rollup_addr =
-        SmartRollupAddress::from_b58check("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
+    let rollup_addr = SmartRollupAddress::from_b58check(ROLLUP_ADDRESS).unwrap();
+    let ticketer =
+        tezos_crypto_rs::hash::ContractKt1Hash::from_base58_check(TICKETER_ADDRESS)
             .unwrap();
-    // Default ticketer address (will be made configurable later)
-    let ticketer = tezos_crypto_rs::hash::ContractKt1Hash::from_base58_check(
-        "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
-    )
-    .unwrap();
 
     let mut builder = InboxBuilder::new(
         rollup_addr.clone(),
@@ -787,15 +784,10 @@ fn mock_fa_deposit_op(
     amount_mutez: u64,
     inbox_id: InboxId,
 ) -> (String, String) {
-    // Default rollup address (will be made configurable later)
-    let rollup_addr =
-        SmartRollupAddress::from_b58check("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
+    let rollup_addr = SmartRollupAddress::from_b58check(ROLLUP_ADDRESS).unwrap();
+    let ticketer =
+        tezos_crypto_rs::hash::ContractKt1Hash::from_base58_check(TICKETER_ADDRESS)
             .unwrap();
-    // Default ticketer address (will be made configurable later)
-    let ticketer = tezos_crypto_rs::hash::ContractKt1Hash::from_base58_check(
-        "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
-    )
-    .unwrap();
 
     let mut builder = InboxBuilder::new(
         rollup_addr.clone(),
@@ -929,7 +921,7 @@ pub mod inbox_utils {
     pub fn hex_external_message(op: SignedOperation) -> String {
         let bytes = encode_signed_operation(
             &op,
-            &SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),
+            &SmartRollupAddress::from_b58check(ROLLUP_ADDRESS).unwrap(),
         )
         .unwrap();
         hex::encode(bytes)
