@@ -12,7 +12,7 @@ on:
         description: "ref (branch, tag, or SHA) that will be used to build docs"
         type: string
       dry_run:
-        description: Dry-run SDK build without publishing the built artefact
+        description: Dry-run doc build without publishing the built artefact
         type: boolean
         required: false
         default: true
@@ -23,7 +23,7 @@ on:
         description: "ref (branch, tag, or SHA) that will be used to build docs"
         type: string
       dry_run:
-        description: Dry-run SDK build without publishing the built artefact
+        description: Dry-run doc build without publishing the built artefact
         type: boolean
         required: false
         default: true
