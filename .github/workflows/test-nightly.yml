@@ -57,8 +57,8 @@ jobs:
   sequencer_riscv_test:
     name: Run sequencer RISCV test
     runs-on: [large, nix]
-    needs: [build_riscv_kernel]
     steps:
+      - uses: actions/checkout@v6
       - name: Build kernel
         shell: bash
         # ticketer address must match the one specified in the test
