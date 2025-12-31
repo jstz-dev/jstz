@@ -741,7 +741,7 @@ mod tests {
         protocol::{BootstrapAccount, ProtocolParameterBuilder},
         rollup::OctezRollupConfigBuilder,
     };
-    use tezos_crypto_rs::hash::SmartRollupHash;
+    use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 
     use super::JstzdConfig;
 
@@ -902,6 +902,14 @@ mod tests {
                     debug_log_path: PathBuf::from("/log"),
                     runtime_env: RuntimeEnv::Native,
                     inbox_checkpoint_path: PathBuf::from("/inbox/checkpoint"),
+                    ticketer_address: ContractKt1Hash::from_base58_check(
+                        "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                    )
+                    .unwrap(),
+                    rollup_address: SmartRollupHash::from_str(
+                        "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                    )
+                    .unwrap(),
                 },
                 false,
             )),

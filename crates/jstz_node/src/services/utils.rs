@@ -73,13 +73,14 @@ pub(crate) mod tests {
         hash::Blake2b,
         smart_function_hash::{Kt1Hash, SmartFunctionHash},
     };
+    use jstz_mock::kt1_account1;
     use jstz_proto::receipt::{
         DeployFunctionReceipt, Receipt, ReceiptContent, ReceiptResult,
     };
     use mockito::Matcher;
     use octez::OctezRollupClient;
     use tempfile::NamedTempFile;
-    use tezos_crypto_rs::hash::ContractKt1Hash;
+    use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
     use tower::util::ServiceExt;
 
     use crate::{
@@ -165,6 +166,11 @@ pub(crate) mod tests {
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
+                ticketer_address: kt1_account1(),
+                rollup_address: SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+                )
+                .unwrap(),
             },
             false,
             OctezRollupClient::new(String::new()),
@@ -184,6 +190,11 @@ pub(crate) mod tests {
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
+                ticketer_address: kt1_account1(),
+                rollup_address: SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+                )
+                .unwrap(),
             },
             false,
             OctezRollupClient::new(String::new()),

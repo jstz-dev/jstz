@@ -19,7 +19,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use http::Uri;
-use jstz_node::config::{JstzNodeConfig, RunModeBuilder};
+use jstz_node::config::{JstzNodeConfig, RunModeBuilder, RunModeType};
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{
     BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,
@@ -33,7 +33,7 @@ use octez::r#async::{
     rollup::OctezRollupConfigBuilder,
 };
 use serde::Deserialize;
-use tezos_crypto_rs::hash::SmartRollupHash;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tokio::io::AsyncReadExt;
 
 const DEFAULT_JSTZD_SERVER_PORT: u16 = 54321;
@@ -218,7 +218,18 @@ fn build_jstz_node_config(
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
     let injector = find_injector_account(builtin_bootstrap_accounts()?)
         .context("failed to retrieve injector account")?;
-    let mut run_mode_builder = RunModeBuilder::new(config.mode.unwrap_or_default());
+    let mode = config.mode.unwrap_or_default();
+    let mut run_mode_builder = RunModeBuilder::new(mode.clone());
+    if let RunModeType::Sequencer = mode {
+        run_mode_builder = run_mode_builder.with_ticketer_address(
+            ContractKt1Hash::from_base58_check(JSTZ_NATIVE_BRIDGE_ADDRESS)?,
+        )?;
+        run_mode_builder = run_mode_builder.with_rollup_address(
+            config
+                .rollup_address
+                .unwrap_or(SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS)?),
+        )?;
+    }
     if let Some(v) = config.capacity {
         run_mode_builder = run_mode_builder.with_capacity(v)?;
     }
@@ -228,9 +239,7 @@ fn build_jstz_node_config(
     if let Some(path) = config.riscv_kernel_path {
         run_mode_builder = run_mode_builder.with_riscv_kernel_path(path)?;
     }
-    if let Some(v) = config.rollup_address {
-        run_mode_builder = run_mode_builder.with_rollup_address(v)?;
-    }
+
     Ok(JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         rollup_rpc_endpoint,
@@ -860,6 +869,11 @@ mod tests {
             run_mode["runtime_env"],
             serde_json::json!({"type": "native"})
         );
+        assert_eq!(
+            run_mode["ticketer_address"],
+            super::JSTZ_NATIVE_BRIDGE_ADDRESS
+        );
+        assert_eq!(run_mode["rollup_address"], super::JSTZ_ROLLUP_ADDRESS);
     }
 
     #[tokio::test]
@@ -905,8 +919,13 @@ mod tests {
         assert_eq!(run_mode["debug_log_path"], "/tmp/log");
         assert_eq!(
             run_mode["runtime_env"],
-            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel", "rollup_address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK"})
+            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel"})
         );
+        assert_eq!(
+            run_mode["ticketer_address"],
+            super::JSTZ_NATIVE_BRIDGE_ADDRESS
+        );
+        assert_eq!(run_mode["rollup_address"], super::JSTZ_ROLLUP_ADDRESS);
 
         let bad_config = UserJstzNodeConfig {
             riscv_kernel_path: Some(PathBuf::new()),
