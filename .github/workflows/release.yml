@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: Ref of the commit from a release will be built
+        description: Ref of the commit from which a release will be built
         required: true
         type: string
       octez_version:
@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: Dry-run CLI build without publishing a release
+        description: Dry-run without publishing artefacts
         type: boolean
         required: false
         default: true
@@ -44,7 +44,7 @@ on:
   workflow_call:
     inputs:
       ref:
-        description: Ref of the commit from a release will be built
+        description: Ref of the commit from which a release will be built
         required: true
         type: string
       octez_version:
@@ -52,7 +52,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: Dry-run SDK build without pushing to NPM
+        description: Dry-run without publishing artefacts
         type: boolean
         required: false
         default: true

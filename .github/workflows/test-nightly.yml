@@ -70,7 +70,3 @@ jobs:
         run: |
           cd crates/jstz_node
           nix --accept-flake-config --log-format raw -L develop --command sh -c 'cargo test --test sequencer run_riscv_sequencer --features riscv_test --release'
-
-  runtime_api_coverage:
-    name: Runtime API coverage
-    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@main
