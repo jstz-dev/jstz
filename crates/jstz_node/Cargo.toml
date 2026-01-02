@@ -26,9 +26,10 @@ derive_more.workspace = true
 env_logger.workspace = true
 futures-util.workspace = true
 hex.workspace = true
-jstz_core = { path = "../jstz_core" }
+http.workspace = true
+jstz_core = { path = "../jstz_core", features = ["simulation"] }
 jstz_crypto = { path = "../jstz_crypto" }
-jstz_proto = { path = "../jstz_proto", features = ["kernel"] }
+jstz_proto = { path = "../jstz_proto", features = ["simulation", "kernel"] }
 jstz_utils = { path = "../jstz_utils" }
 jstz_kernel = { path = "../kernels/jstz_kernel" }
 
