@@ -1,47 +1,49 @@
+use super::host_script::HostScript;
+use super::http::{Body, HostName, Response, SupportedScheme};
+use crate::context::account::{Account, Address, AddressKind, Addressable};
 use crate::executor::smart_function::{FA_WITHDRAW_PATH, NOOP_PATH, WITHDRAW_PATH};
 use crate::logger::{
     log_request_end_with_host, log_request_start_with_host, log_response_status_code,
 };
 use crate::operation::OperationHash;
-use crate::runtime::v2::fetch::error::{FetchError, Result};
-use crate::runtime::v2::fetch::http::Request;
-use crate::runtime::v2::ledger;
-use crate::runtime::v2::protocol_context::PROTOCOL_CONTEXT;
-use crate::runtime::SNAPSHOT;
-
+use crate::runtime::v2::{
+    fetch::{
+        error::{FetchError, Result},
+        http::Request,
+        resources::FetchRequestResource,
+    },
+    ledger, SNAPSHOT,
+};
 use deno_core::error::CoreError;
 use deno_core::{
     resolve_import, v8, ByteString, JsBuffer, OpState, ResourceId, StaticModuleLoader,
 };
-use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
-use futures::FutureExt;
-use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_runtime::runtime::{AsyncEntered, Limiter, MAX_SMART_FUNCTION_CALL_COUNT};
-use std::future::Future;
-use std::pin::Pin;
-use std::{cell::RefCell, rc::Rc};
-
-use jstz_core::host::JsHostRuntime;
-use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_runtime::sys::{
-    FromV8, Headers as JsHeaders, Request as JsRequest, RequestInit as JsRequestInit,
-    Response as JsResponse, ToV8,
+use deno_fetch_base::{FetchHandler, FetchResponse, FetchResponseResource, FetchReturn};
+use jstz_core::{
+    host::{HostRuntime, JsHostRuntime},
+    kv::Transaction,
+    Revealer,
 };
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_runtime::{
+    runtime::{AsyncEntered, Limiter, MAX_SMART_FUNCTION_CALL_COUNT},
+    sys::{
+        FromV8, Headers as JsHeaders, Request as JsRequest, RequestInit as JsRequestInit,
+        Response as JsResponse, ToV8,
+    },
     FetchHandlerOptions, JstzRuntime, JstzRuntimeOptions, RuntimeContext,
 };
+use std::{cell::RefCell, num::NonZeroU64, rc::Rc, str::FromStr};
 use url::Url;
 
-use crate::context::account::{Account, Address, AddressKind, Addressable};
-use crate::runtime::v2::fetch::resources::FetchRequestResource;
-use deno_fetch_base::FetchResponseResource;
+#[cfg(not(feature = "simulation"))]
+use {
+    crate::runtime::v2::protocol_context::PROTOCOL_CONTEXT, futures::FutureExt,
+    jstz_crypto::public_key_hash::PublicKeyHash, std::future::Future, std::pin::Pin,
+};
 
-use super::host_script::HostScript;
-use super::http::HostName;
-use super::http::{Body, Response, SupportedScheme};
-use std::num::NonZeroU64;
-use std::str::FromStr;
+#[cfg(feature = "simulation")]
+use jstz_core::simulation::{self, HostRevealer};
 
 /// Provides the backend for Deno's [fetch](https://docs.deno.com/api/web/~/fetch) which structures
 /// its implementation into two steps to allow an [abort handler](https://github.com/jstz-dev/deno/blob/v2.1.10-jstz/ext/fetch_base/26_fetch.js#L182)
@@ -169,6 +171,76 @@ fn fetch(
     })
 }
 
+#[cfg(feature = "simulation")]
+pub async fn process_and_dispatch_request(
+    host: JsHostRuntime<'static>,
+    tx: Transaction,
+    is_run_function: bool,
+    // Top level operation hash
+    operation_hash: Option<OperationHash>,
+    // Source address that initiated the RunFunction operation. Must be a user address
+    source: Address,
+    // Address that initiated the call. This will be a user address equal to source
+    // if called from RunFunction or a smart function address if called from fetch
+    from: Address,
+    method: ByteString,
+    url: Url,
+    headers: Vec<(ByteString, ByteString)>,
+    data: Option<Body>,
+    // Limits the number of smart function calls per `RunFunction` operation.
+    limiter: Limiter,
+) -> Response {
+    process_and_dispatch_request_impl::<HostRevealer>(
+        host,
+        tx,
+        is_run_function,
+        operation_hash,
+        source,
+        from,
+        method,
+        url,
+        headers,
+        data,
+        limiter,
+    )
+    .await
+}
+
+#[cfg(not(feature = "simulation"))]
+pub async fn process_and_dispatch_request(
+    host: JsHostRuntime<'static>,
+    tx: Transaction,
+    is_run_function: bool,
+    // Top level operation hash
+    operation_hash: Option<OperationHash>,
+    // Source address that initiated the RunFunction operation. Must be a user address
+    source: Address,
+    // Address that initiated the call. This will be a user address equal to source
+    // if called from RunFunction or a smart function address if called from fetch
+    from: Address,
+    method: ByteString,
+    url: Url,
+    headers: Vec<(ByteString, ByteString)>,
+    data: Option<Body>,
+    // Limits the number of smart function calls per `RunFunction` operation.
+    limiter: Limiter,
+) -> Response {
+    process_and_dispatch_request_impl::<()>(
+        host,
+        tx,
+        is_run_function,
+        operation_hash,
+        source,
+        from,
+        method,
+        url,
+        headers,
+        data,
+        limiter,
+    )
+    .await
+}
+
 /// Dispatch the request to the appropriate handler based on the scheme and always
 /// returns a response.
 ///
@@ -179,7 +251,7 @@ fn fetch(
 /// the expected response type.This function is agnostic of the context in which it
 /// is called thus suitable as the [`crate::operation::RunFunction`] handler
 #[allow(clippy::too_many_arguments)]
-pub async fn process_and_dispatch_request(
+pub async fn process_and_dispatch_request_impl<Rv: Revealer>(
     mut host: JsHostRuntime<'static>,
     mut tx: Transaction,
     is_run_function: bool,
@@ -226,6 +298,7 @@ pub async fn process_and_dispatch_request(
             result.into()
         }
         Ok(SupportedScheme::Http) | Ok(SupportedScheme::Https) => {
+            #[cfg(not(feature = "simulation"))]
             match dispatch_oracle(
                 &mut host,
                 &mut tx,
@@ -254,6 +327,10 @@ pub async fn process_and_dispatch_request(
                 }
                 Err(e) => Err(e).into(),
             }
+
+            // For simulation, the oracle request is sent to the host via the reveal channel.
+            #[cfg(feature = "simulation")]
+            dispatch_oracle::<Rv>(method, &url, headers, data)
         }
         Err(err) => err.into(),
     };
@@ -265,6 +342,25 @@ pub async fn process_and_dispatch_request(
     response
 }
 
+#[cfg(feature = "simulation")]
+fn dispatch_oracle<Rv: Revealer>(
+    method: ByteString,
+    url: &Url,
+    headers: Vec<(ByteString, ByteString)>,
+    data: Option<Body>,
+) -> Response {
+    let request = Request {
+        method,
+        url: url.clone(),
+        headers,
+        body: data,
+    };
+
+    simulation::send_request::<Rv, Request, Response>(&request)
+        .unwrap_or_else(|e| e.into())
+}
+
+#[cfg(not(feature = "simulation"))]
 fn dispatch_oracle(
     host: &mut JsHostRuntime<'static>,
     tx: &mut Transaction,
@@ -771,6 +867,7 @@ fn log_event(
 struct SourceAddress(Address);
 
 impl SourceAddress {
+    #[cfg(not(feature = "simulation"))]
     pub fn as_user(&self) -> &PublicKeyHash {
         self.0.as_user().unwrap()
     }
@@ -790,33 +887,19 @@ impl TryFrom<Address> for SourceAddress {
 
 #[cfg(test)]
 mod test {
+    use super::process_and_dispatch_request;
     use super::ProtoFetchHandler;
-    use crate::runtime::v2::{
-        fetch::fetch_handler::process_and_dispatch_request, oracle::OracleRequest,
-        protocol_context::ProtocolContext,
-    };
+    use crate::runtime::v2::{fetch::fetch_handler::SourceAddress, test_utils::*};
     use crate::runtime::ParsedCode;
     use crate::{
         context::account::{Account, Address},
         tests::DebugLogSink,
     };
-    use crate::{
-        runtime::v2::{
-            fetch::{fetch_handler::SourceAddress, http::Response},
-            protocol_context::PROTOCOL_CONTEXT,
-            test_utils::*,
-        },
-        storage::ORACLE_PUBLIC_KEY_PATH,
-    };
     use deno_core::{resolve_import, StaticModuleLoader};
-    use jstz_core::{
-        event::{self, Event},
-        host::JsHostRuntime,
-        kv::{Storage, Transaction},
-    };
+    use jstz_core::host::JsHostRuntime;
+    use jstz_core::kv::Transaction;
     use jstz_crypto::{
         hash::{Blake2b, Hash},
-        public_key::PublicKey,
         smart_function_hash::SmartFunctionHash,
     };
     use jstz_runtime::{
@@ -827,6 +910,32 @@ mod test {
     use std::rc::Rc;
     use std::{collections::HashMap, str::FromStr};
     use url::Url;
+
+    #[cfg(not(feature = "simulation"))]
+    use {
+        crate::runtime::v2::{
+            fetch::http::Response,
+            oracle::OracleRequest,
+            protocol_context::{ProtocolContext, PROTOCOL_CONTEXT},
+        },
+        crate::storage::ORACLE_PUBLIC_KEY_PATH,
+        jstz_core::{
+            event::{self, Event},
+            kv::Storage,
+        },
+        jstz_crypto::public_key::PublicKey,
+    };
+
+    #[cfg(feature = "simulation")]
+    use {
+        crate::runtime::v2::fetch::{
+            fetch_handler::process_and_dispatch_request_impl,
+            http::{Body, Request, Response},
+        },
+        jstz_core::{
+            host::HostError, simulation::JSTZ_REVEAL_TAG, BinEncodable, Revealer,
+        },
+    };
 
     // Script simply fetches the smart function given in the path param
     // eg. jstz://<host address>/<remote address> will call fetch("jstz://<remote address>")
@@ -2237,6 +2346,7 @@ mod test {
     // Oracle behaviour
 
     #[test]
+    #[cfg(not(feature = "simulation"))]
     fn fetch_http_returns_response() {
         TOKIO.block_on(async {
             let code = r#"
@@ -2314,6 +2424,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(feature = "simulation"))]
     fn oracle_fetch_rejected_when_transaction_has_pending_changes() {
         TOKIO.block_on(async {
             let code = r#"
@@ -2361,5 +2472,121 @@ mod test {
                 String::from_utf8(response.body.to_vec()).unwrap()
             );
         })
+    }
+
+    #[test]
+    #[cfg(feature = "simulation")]
+    fn handles_oracle_request_via_reveal_request_for_simulation() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (_req) => new Response("hello world")"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (host, tx, source_address, _) = setup(&mut host, [run, remote]);
+
+            // Mock revealer that asserts the oracle request and send a successful response
+            struct MockRevealer;
+            impl Revealer for MockRevealer {
+                unsafe fn reveal(
+                    request: &[u8],
+                    response: &mut [u8],
+                ) -> std::result::Result<usize, HostError> {
+                    // Assert the oracle request
+                    assert_eq!(request[0], JSTZ_REVEAL_TAG);
+                    let req = Request::decode(&request[1..]).unwrap();
+                    assert_eq!(req.method, "GET".into());
+                    assert_eq!(req.url, Url::parse("http://example.com").unwrap());
+                    assert_eq!(req.headers, vec![]);
+                    assert_eq!(
+                        req.body,
+                        Some(Body::Vector("request body".as_bytes().to_vec()))
+                    );
+
+                    // Return the mock response
+                    let resp = Response {
+                        status: 200,
+                        status_text: "OK".into(),
+                        headers: Vec::new(),
+                        body: Body::Vector("hello world".as_bytes().to_vec()),
+                    };
+                    let resp_encoded = resp.encode().unwrap();
+                    let len = resp_encoded.len();
+                    response[..len].copy_from_slice(&resp_encoded);
+                    Ok(len)
+                }
+            }
+
+            // Run
+            let response = process_and_dispatch_request_impl::<MockRevealer>(
+                host,
+                tx,
+                false,
+                None,
+                source_address.clone().into(),
+                source_address.into(),
+                "GET".into(),
+                Url::parse("http://example.com").unwrap(),
+                vec![],
+                Some(Body::Vector("request body".as_bytes().to_vec())),
+                Limiter::default(),
+            )
+            .await;
+
+            // Assert
+            assert_eq!(
+                "hello world",
+                String::from_utf8(response.body.into()).unwrap()
+            );
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "simulation")]
+    fn handles_reveal_request_error_for_simulation() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (_req) => new Response("hello world")"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (host, tx, source_address, _) = setup(&mut host, [run, remote]);
+
+            // Mock revealer that returns an error
+            struct MockRevealer;
+            impl Revealer for MockRevealer {
+                unsafe fn reveal(
+                    _: &[u8],
+                    _: &mut [u8],
+                ) -> std::result::Result<usize, HostError> {
+                    Err(HostError::DecodingError)
+                }
+            }
+
+            // Run
+            let response = process_and_dispatch_request_impl::<MockRevealer>(
+                host,
+                tx,
+                false,
+                None,
+                source_address.clone().into(),
+                source_address.into(),
+                "GET".into(),
+                Url::parse("http://example.com").unwrap(),
+                vec![],
+                Some(Body::Vector("request body".as_bytes().to_vec())),
+                Limiter::default(),
+            )
+            .await;
+
+            assert_eq!(response.status, 500);
+            assert_eq!(response.status_text, "Internal Server Error");
+            assert_eq!(
+                "RuntimeError::DecodingError",
+                String::from_utf8(response.body.to_vec()).unwrap()
+            );
+        });
     }
 }
