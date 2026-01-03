@@ -25,6 +25,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;
 mod services;
+pub mod simulation;
 pub mod storage_sync;
 use services::Service;
 use utoipa::OpenApi;
@@ -34,7 +35,7 @@ pub mod config;
 pub mod sequencer;
 pub use config::RunMode;
 
-use crate::config::RuntimeEnv;
+use crate::{config::RuntimeEnv, simulation::config::SimulationConfig};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -76,6 +77,7 @@ pub struct RunOptions {
     pub mode: RunMode,
     pub storage_sync: bool,
     pub runtime_db_path: Option<PathBuf>,
+    pub simulation: Option<SimulationConfig>,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -92,6 +94,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         mode: config.mode,
         storage_sync: config.storage_sync,
         runtime_db_path: config.runtime_db_path,
+        simulation: config.simulation,
     })
     .await
 }
@@ -107,6 +110,7 @@ pub async fn run(
         mode,
         storage_sync,
         runtime_db_path,
+        ..
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -392,6 +396,7 @@ mod test {
                 mode: mode.clone(),
                 storage_sync: false,
                 runtime_db_path: None,
+                simulation: None,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -456,6 +461,7 @@ mod test {
                 mode,
                 storage_sync: false,
                 runtime_db_path: None,
+                simulation: None,
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -557,6 +563,7 @@ mod test {
             mode,
             storage_sync: true,
             runtime_db_path: None,
+            simulation: None,
         }))
     }
 

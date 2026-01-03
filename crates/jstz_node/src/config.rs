@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 
+use crate::simulation::config::SimulationConfig;
+
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
@@ -191,6 +193,8 @@ pub struct JstzNodeConfig {
     /// Path to the sqlite db file that keeps the runtime state.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runtime_db_path: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub simulation: Option<SimulationConfig>,
 }
 
 impl JstzNodeConfig {
@@ -207,6 +211,7 @@ impl JstzNodeConfig {
         injector: KeyPair,
         mode: RunMode,
         storage_sync: bool,
+        simulation: Option<SimulationConfig>,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -217,6 +222,7 @@ impl JstzNodeConfig {
             mode,
             storage_sync,
             runtime_db_path: None,
+            simulation,
         }
     }
 }
@@ -248,6 +254,7 @@ mod tests {
             ),
             RunMode::Default,
             true,
+            None,
         );
 
         let json = serde_json::to_value(&config).unwrap();
