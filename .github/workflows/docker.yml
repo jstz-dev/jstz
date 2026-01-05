@@ -91,13 +91,13 @@ jobs:
         run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_lightweight_kernel -o result-lightweight
       - name: Upload kernel
         id: upload-kernel
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: jstz-kernel
           path: result-kernel/lib/jstz_kernel.wasm
       - name: Upload lightweight kernel
         id: upload-lightweight-kernel
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: lightweight-kernel-executable
           path: result-lightweight/bin/lightweight-kernel-executable
