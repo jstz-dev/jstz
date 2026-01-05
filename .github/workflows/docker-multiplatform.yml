@@ -118,7 +118,7 @@ jobs:
           echo "sha=$(git rev-parse ${{ inputs.ref }})" >> $GITHUB_OUTPUT
           echo "short_sha=$(git rev-parse --short ${{ inputs.ref }})" >> $GITHUB_OUTPUT
       - name: Download digests
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests/${{ inputs.image_id }}
           pattern: digests-${{ inputs.image_id }}-*
