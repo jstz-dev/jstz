@@ -1,6 +1,6 @@
 # Jstz
 
-[![codecov](https://codecov.io/gh/jstz-dev/jstz/graph/badge.svg?token=FA7IPI5Q9J)](https://codecov.io/gh/jstz-dev/jstz)
+[![codecov](https://codecov.io/gh/jstz-dev/jstz/graph/badge.svg?token=FA7IPI5Q9J)](https://codecov.io/gh/jstz-dev/jstz) [![Nightly build](https://github.com/jstz-dev/jstz/actions/workflows/build-nightly.yml/badge.svg?branch=main)](https://github.com/jstz-dev/jstz/actions/workflows/build-nightly.yml)
 
 Jstz (pronounced: "justice") is a JavaScript runtime powered by Tezos Smart Optimistic Rollups that is built in [Rust](https://www.rust-lang.org/).
 
