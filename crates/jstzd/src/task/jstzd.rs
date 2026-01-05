@@ -912,6 +912,7 @@ mod tests {
                     .unwrap(),
                 },
                 false,
+                None,
             )),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(

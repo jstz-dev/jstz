@@ -3267,6 +3267,7 @@ dependencies = [
  "tokio-util",
  "tower",
  "tower-http",
+ "url",
  "utoipa",
  "utoipa-axum",
  "utoipa-scalar",
