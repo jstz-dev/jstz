@@ -1575,15 +1575,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.190.0"
+version = "0.222.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d79e743ad841f7826d46c6944580f5ba665fe9ab4c31a68c4eed8b5a78225da3"
-dependencies = [
- "deno_core",
- "deno_error",
- "thiserror 2.0.12",
- "urlpattern 0.3.0",
-]
+checksum = "54c190c36940b8ba25043e2258775df3cd4af06f28c8a9efd28b50799efe2977"
 
 [[package]]
 name = "deno_web"
@@ -3036,7 +3030,7 @@ dependencies = [
  "tezos-smart-rollup-mock 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tokio",
  "url",
- "urlpattern 0.2.0",
+ "urlpattern",
  "utoipa",
 ]
 
@@ -6710,18 +6704,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9bd5ff03aea02fa45b13a7980151fe45009af1980ba69f651ec367121a31609"
 dependencies = [
  "derive_more",
- "regex",
- "serde",
- "unic-ucd-ident",
- "url",
-]
-
-[[package]]
-name = "urlpattern"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70acd30e3aa1450bc2eece896ce2ad0d178e9c079493819301573dae3c37ba6d"
-dependencies = [
  "regex",
  "serde",
  "unic-ucd-ident",
