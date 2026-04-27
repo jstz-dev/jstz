@@ -35,7 +35,7 @@ description = "JavaScript server runtime for Tezos Smart Rollups"
 
 [workspace.dependencies]
 anyhow = "1.0.82"
-assert_cmd = "2.0.14"
+assert_cmd = "2.2.1"
 async-dropper-simple = { version = "0.2.6", features = ["tokio"] }
 async-trait = "0.1.82"
 axum = "0.7.7"
