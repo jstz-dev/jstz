@@ -3,71 +3,80 @@
 const sidebars = {
   documentationSidebar: [
     {
-      type: "category",
-      collapsed: false,
-      label: "Getting Started",
-      items: ["installation", "quick_start", "cli", "sandbox", "examples"],
+      type: 'link',
+      label: 'Tezos X docs',
+      href: 'https://x.tezos.com/docs',
     },
-
     {
-      type: "category",
-      collapsed: false,
-      label: "Architecture",
-      items: [
-        "architecture/overview",
-        "architecture/bridge",
-        "architecture/accounts",
-        "architecture/networks",
-        "architecture/oracle",
-      ],
+      type: 'link',
+      label: 'Tezos X: from Roadmap to Reality',
+      href: 'https://research-development.nomadic-labs.com/tezosx-from-roadmap-to-reality.html',
     },
-
-    {
-      type: "category",
-      collapsed: false,
-      label: "Smart functions",
-      items: [
-        "functions/overview",
-        "functions/building",
-        "functions/deploying",
-        "functions/requests",
-        "functions/data_storage",
-        "functions/calling",
-        "functions/apis",
-        "functions/tokens",
-        "functions/errors",
-      ],
-    },
-
-    {
-      type: "category",
-      collapsed: false,
-      label: "Client SDK",
-      link: {
-        id: "client/overview",
-      },
-      items: [],
-    },
-
-    {
-      type: "category",
-      collapsed: true,
-      label: "API Reference",
-      items: [
-        "api/index",
-        "api/console",
-        "api/kv",
-        "api/ledger",
-        "api/headers",
-        "api/request",
-        "api/response",
-        "api/url",
-        "api/url_search_params",
-        "api/url_pattern",
-        "api/text_encoder",
-        "api/text_decoder",
-      ],
-    },
+//     {
+//       type: "category",
+//       collapsed: false,
+//       label: "Getting Started",
+//       items: ["installation", "quick_start", "cli", "sandbox", "examples"],
+//     },
+//     {
+//       type: "category",
+//       collapsed: false,
+//       label: "Architecture",
+//       items: [
+//         "architecture/overview",
+//         "architecture/bridge",
+//         "architecture/accounts",
+//         "architecture/networks",
+//         "architecture/oracle",
+//       ],
+//     },
+// 
+//     {
+//       type: "category",
+//       collapsed: false,
+//       label: "Smart functions",
+//       items: [
+//         "functions/overview",
+//         "functions/building",
+//         "functions/deploying",
+//         "functions/requests",
+//         "functions/data_storage",
+//         "functions/calling",
+//         "functions/apis",
+//         "functions/tokens",
+//         "functions/errors",
+//       ],
+//     },
+// 
+//     {
+//       type: "category",
+//       collapsed: false,
+//       label: "Client SDK",
+//       link: {
+//         id: "client/overview",
+//       },
+//       items: [],
+//     },
+// 
+//     {
+//       type: "category",
+//       collapsed: true,
+//       label: "API Reference",
+//       items: [
+//         "api/index",
+//         "api/console",
+//         "api/kv",
+//         "api/ledger",
+//         "api/headers",
+//         "api/request",
+//         "api/response",
+//         "api/url",
+//         "api/url_search_params",
+//         "api/url_pattern",
+//         "api/text_encoder",
+//         "api/text_decoder",
+//       ],
+//     },
   ],
 };
 
