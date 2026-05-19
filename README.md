@@ -1,3 +1,12 @@
+:::warning
+
+**The Jstz project is being paused**, due to adjustment of priorities in the Tezos X roadmap, in response to market signals:
+
+*"The absence of strong demand at this stage for a JavaScript interface means that enabling a JavaScript interface (Jstz) in Mainnet is no longer a near-term priority. An important milestone, the RISC-V migration—required to support additional runtimes such as JavaScript—is targeted for H2 2026."*
+(see [the full announcement](https://research-development.nomadic-labs.com/tezosx-from-roadmap-to-reality.html#priorities-what-moved-up-what-moved-down)))
+
+:::
+
 # Jstz
 
 [![codecov](https://codecov.io/gh/jstz-dev/jstz/graph/badge.svg?token=FA7IPI5Q9J)](https://codecov.io/gh/jstz-dev/jstz)
