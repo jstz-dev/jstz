@@ -25,7 +25,7 @@
     "@jstz-dev/jstz": "^0.0.0",
     "@jstz-dev/sdk": "^0.0.0",
     "@jstz-dev/types": "^0.0.0",
-    "jstz_sdk": "^0.1.0-alpha.0"
+    "jstz_sdk": "^0.1.1-alpha.4.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.2.1",
