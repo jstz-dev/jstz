@@ -59,6 +59,17 @@ impl PartialEq for Response {
     }
 }
 
+impl From<jstz_core::Error> for Response {
+    fn from(value: jstz_core::Error) -> Self {
+        Response {
+            status: 500,
+            status_text: "Internal Server Error".into(),
+            headers: Vec::new(),
+            body: Body::Vector(value.to_string().into_bytes()),
+        }
+    }
+}
+
 impl Into<http::Response<Option<Vec<u8>>>> for Response {
     fn into(self) -> http::Response<Option<Vec<u8>>> {
         // According to JavaScript documentation, `Response.error()` returns a response with status code 0

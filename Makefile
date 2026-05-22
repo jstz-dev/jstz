@@ -135,6 +135,7 @@ test-unit-v2:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
 	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features v2_runtime,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
+	@cargo nextest run -p jstz_proto --features v2_runtime,simulation --config-file .config/nextest.toml
 
 .PHONY: test-int
 test-int-v2:
