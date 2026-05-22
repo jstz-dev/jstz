@@ -120,7 +120,7 @@ signal-hook = "0.3.17"
 simple_asn1 = "0.6.3"
 syntect = "5.2.0"
 tempfile = "3.10.0"
-thiserror = "1.0.69"
+thiserror = "2.0.12"
 tl = "0.7.7"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-retry2 = "0.5.7"
